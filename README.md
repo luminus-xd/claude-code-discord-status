@@ -36,6 +36,7 @@
 - **Activity mode detection** — Dominant activity type (coding, terminal, searching, thinking) changes the card icon
 - **Rotating tooltips** — Hidden easter eggs on hover, rotating every 5 minutes
 - **Auto-reconnect** — Daemon handles Discord RPC disconnects gracefully
+- **Localization** — English and Japanese supported
 
 ## Quick Start
 
@@ -93,6 +94,7 @@ Config file: `~/.claude-discord-status/config.json`
 | --- | --- | --- | --- |
 | `discordClientId` | `CLAUDE_DISCORD_CLIENT_ID` | `1472915568930848829` | Discord Application Client ID |
 | `daemonPort` | `CLAUDE_DISCORD_PORT` | `19452` | Local HTTP server port |
+| `locale` | `CLAUDE_DISCORD_LOCALE` | `en` | Display language (`en`, `ja`) |
 
 The default client ID works out of the box — it's a public app identifier, not a secret.
 
