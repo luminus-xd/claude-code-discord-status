@@ -16,6 +16,7 @@ interface ConfigFile {
   idleTimeout?: number;
   removeTimeout?: number;
   updateCheck?: boolean;
+  preset?: string;
 }
 
 export function loadConfig(): AppConfig {
@@ -46,5 +47,6 @@ export function loadConfig(): AppConfig {
     idleTimeout: fileConfig.idleTimeout ?? IDLE_TIMEOUT,
     removeTimeout: fileConfig.removeTimeout ?? REMOVE_TIMEOUT,
     updateCheck,
+    preset: process.env.CLAUDE_DISCORD_PRESET ?? fileConfig.preset ?? 'minimal',
   };
 }

@@ -16,6 +16,8 @@ import {
   SINGLE_SESSION_DETAILS_FALLBACK,
   SINGLE_SESSION_STATE_MESSAGES,
 } from '../../src/shared/constants.js';
+import { genZPreset } from '../../src/presets/gen-z.js';
+import type { MessagePreset } from '../../src/presets/types.js';
 
 function makeSession(overrides: Partial<Session> = {}): Session {
   return {
@@ -40,7 +42,7 @@ function makeCounts(overrides: Partial<ActivityCounts> = {}): ActivityCounts {
 
 describe('resolvePresence', () => {
   it('returns null for 0 sessions', () => {
-    expect(resolvePresence([])).toBeNull();
+    expect(resolvePresence([], genZPreset)).toBeNull();
   });
 
   describe('single session mode', () => {
@@ -48,7 +50,7 @@ describe('resolvePresence', () => {
 
     it('picks details from action-specific pool based on smallImageKey', () => {
       const session = makeSession({ smallImageKey: 'coding' });
-      const activity = resolvePresence([session], now)!;
+      const activity = resolvePresence([session], genZPreset, now)!;
 
       expect(activity).not.toBeNull();
       expect(SINGLE_SESSION_DETAILS['coding']).toContain(activity.details);
@@ -61,7 +63,7 @@ describe('resolvePresence', () => {
     it('uses correct pool for each smallImageKey', () => {
       for (const key of Object.keys(SINGLE_SESSION_DETAILS)) {
         const session = makeSession({ smallImageKey: key });
-        const activity = resolvePresence([session], now)!;
+        const activity = resolvePresence([session], genZPreset, now)!;
 
         expect(SINGLE_SESSION_DETAILS[key]).toContain(activity.details);
       }
@@ -69,7 +71,7 @@ describe('resolvePresence', () => {
 
     it('uses fallback pool for unknown smallImageKey', () => {
       const session = makeSession({ smallImageKey: 'unknown-key' });
-      const activity = resolvePresence([session], now)!;
+      const activity = resolvePresence([session], genZPreset, now)!;
 
       expect(SINGLE_SESSION_DETAILS_FALLBACK).toContain(activity.details);
     });
@@ -79,7 +81,7 @@ describe('resolvePresence', () => {
         smallImageKey: 'thinking',
         smallImageText: 'Thinking...',
       });
-      const activity = resolvePresence([session], now)!;
+      const activity = resolvePresence([session], genZPreset, now)!;
 
       expect(activity.smallImageKey).toBe('thinking');
       expect(activity.smallImageText).toBe('Thinking...');
@@ -90,7 +92,7 @@ describe('resolvePresence', () => {
         smallImageKey: 'coding',
         activityCounts: makeCounts({ edits: 50 }),
       });
-      const activity = resolvePresence([session], now)!;
+      const activity = resolvePresence([session], genZPreset, now)!;
 
       // Single session should NOT show stats line
       expect(SINGLE_SESSION_DETAILS['coding']).toContain(activity.details);
@@ -103,7 +105,7 @@ describe('resolvePresence', () => {
         details: 'Editing file.ts',
         projectName: 'super-secret-project',
       });
-      const activity = resolvePresence([session], now)!;
+      const activity = resolvePresence([session], genZPreset, now)!;
 
       const allFields = [
         activity.details,
@@ -137,7 +139,7 @@ describe('resolvePresence', () => {
           activityCounts: makeCounts({ edits: 3 }),
         }),
       ];
-      const activity = resolvePresence(sessions, now)!;
+      const activity = resolvePresence(sessions, genZPreset, now)!;
 
       expect(activity).not.toBeNull();
       // Details should come from the 2-session message pool
@@ -151,7 +153,7 @@ describe('resolvePresence', () => {
         makeSession({ sessionId: 's2', startedAt: 2000 }),
         makeSession({ sessionId: 's3', startedAt: 3000 }),
       ];
-      const activity = resolvePresence(sessions, now)!;
+      const activity = resolvePresence(sessions, genZPreset, now)!;
 
       expect(MULTI_SESSION_MESSAGES[3]).toContain(activity.details);
     });
@@ -160,7 +162,7 @@ describe('resolvePresence', () => {
       const sessions = Array.from({ length: 4 }, (_, i) =>
         makeSession({ sessionId: `s${i}`, startedAt: 1000 + i }),
       );
-      const activity = resolvePresence(sessions, now)!;
+      const activity = resolvePresence(sessions, genZPreset, now)!;
 
       expect(MULTI_SESSION_MESSAGES[4]).toContain(activity.details);
     });
@@ -169,7 +171,7 @@ describe('resolvePresence', () => {
       const sessions = Array.from({ length: 5 }, (_, i) =>
         makeSession({ sessionId: `s${i}`, startedAt: 1000 + i }),
       );
-      const activity = resolvePresence(sessions, now)!;
+      const activity = resolvePresence(sessions, genZPreset, now)!;
 
       // Should contain '5' somewhere (from {n} replacement)
       expect(activity.details).toContain('5');
@@ -190,7 +192,7 @@ describe('resolvePresence', () => {
           activityCounts: makeCounts({ edits: 5 }),
         }),
       ];
-      const activity = resolvePresence(sessions, now)!;
+      const activity = resolvePresence(sessions, genZPreset, now)!;
 
       expect(activity.state).toContain('28 edits');
       expect(activity.state).toContain('8 cmds');
@@ -202,7 +204,7 @@ describe('resolvePresence', () => {
         makeSession({ sessionId: 's1', activityCounts: makeCounts({ edits: 20 }) }),
         makeSession({ sessionId: 's2', activityCounts: makeCounts({ edits: 10 }) }),
       ];
-      const activity = resolvePresence(sessions, now)!;
+      const activity = resolvePresence(sessions, genZPreset, now)!;
 
       expect(activity.smallImageKey).toBe('coding');
     });
@@ -212,7 +214,7 @@ describe('resolvePresence', () => {
         makeSession({ sessionId: 's1', activityCounts: makeCounts({ edits: 5, commands: 5 }) }),
         makeSession({ sessionId: 's2', activityCounts: makeCounts({ searches: 5, thinks: 5 }) }),
       ];
-      const activity = resolvePresence(sessions, now)!;
+      const activity = resolvePresence(sessions, genZPreset, now)!;
 
       expect(activity.smallImageKey).toBe('multi-session');
     });
@@ -222,9 +224,55 @@ describe('resolvePresence', () => {
         makeSession({ sessionId: 's1', startedAt: 1000 }),
         makeSession({ sessionId: 's2', startedAt: 2000 }),
       ];
-      const activity = resolvePresence(sessions, now)!;
+      const activity = resolvePresence(sessions, genZPreset, now)!;
 
       expect(MULTI_SESSION_TOOLTIPS).toContain(activity.smallImageText);
+    });
+  });
+
+  describe('preset injection', () => {
+    const now = 1_000_000_000;
+
+    it('uses messages from the provided preset for single session', () => {
+      const customPreset: MessagePreset = {
+        ...genZPreset,
+        singleSessionStateMessages: ['Custom state message'],
+        singleSessionDetails: { coding: ['Custom coding detail'] },
+        singleSessionDetailsFallback: ['Custom fallback'],
+      };
+      const session = makeSession({ smallImageKey: 'coding' });
+      const activity = resolvePresence([session], customPreset, now)!;
+
+      expect(activity.state).toBe('Custom state message');
+      expect(activity.details).toBe('Custom coding detail');
+    });
+
+    it('uses fallback from preset for unknown action key', () => {
+      const customPreset: MessagePreset = {
+        ...genZPreset,
+        singleSessionDetails: {},
+        singleSessionDetailsFallback: ['Custom fallback only'],
+      };
+      const session = makeSession({ smallImageKey: 'unknown' });
+      const activity = resolvePresence([session], customPreset, now)!;
+
+      expect(activity.details).toBe('Custom fallback only');
+    });
+
+    it('uses messages from the provided preset for multi session', () => {
+      const customPreset: MessagePreset = {
+        ...genZPreset,
+        multiSessionMessages: { 2: ['Two custom sessions'] },
+        multiSessionTooltips: ['Custom tooltip'],
+      };
+      const sessions = [
+        makeSession({ sessionId: 's1', startedAt: 1000 }),
+        makeSession({ sessionId: 's2', startedAt: 2000 }),
+      ];
+      const activity = resolvePresence(sessions, customPreset, now)!;
+
+      expect(activity.details).toBe('Two custom sessions');
+      expect(activity.smallImageText).toBe('Custom tooltip');
     });
   });
 });

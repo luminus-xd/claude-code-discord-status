@@ -15,6 +15,7 @@ describe('loadConfig', () => {
     delete process.env.CLAUDE_DISCORD_CLIENT_ID;
     delete process.env.CLAUDE_DISCORD_PORT;
     delete process.env.CLAUDE_DISCORD_UPDATE_CHECK;
+    delete process.env.CLAUDE_DISCORD_PRESET;
   });
 
   afterEach(() => {
@@ -102,5 +103,38 @@ describe('loadConfig', () => {
     const config = await loadConfig();
     expect(config.discordClientId).toBe('1472915568930848829');
     expect(config.daemonPort).toBe(19452);
+  });
+
+  it('defaults preset to minimal', async () => {
+    vi.mocked(existsSync).mockReturnValue(false);
+
+    const config = await loadConfig();
+    expect(config.preset).toBe('minimal');
+  });
+
+  it('reads preset from config file', async () => {
+    vi.mocked(existsSync).mockReturnValue(true);
+    vi.mocked(readFileSync).mockReturnValue(
+      JSON.stringify({
+        preset: 'professional',
+      }),
+    );
+
+    const config = await loadConfig();
+    expect(config.preset).toBe('professional');
+  });
+
+  it('CLAUDE_DISCORD_PRESET env var overrides config file', async () => {
+    vi.mocked(existsSync).mockReturnValue(true);
+    vi.mocked(readFileSync).mockReturnValue(
+      JSON.stringify({
+        preset: 'gen-z',
+      }),
+    );
+
+    process.env.CLAUDE_DISCORD_PRESET = 'minimal';
+
+    const config = await loadConfig();
+    expect(config.preset).toBe('minimal');
   });
 });

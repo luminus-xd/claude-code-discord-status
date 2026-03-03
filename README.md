@@ -25,7 +25,7 @@
 </p>
 
 <p align="center">
-  <b>Single session</b> — shows current action + project name &nbsp;·&nbsp; <b>Multiple sessions</b> — quirky messages + aggregate stats
+  <b>Single session</b> (professional preset) &nbsp;·&nbsp; <b>Multiple sessions</b> (dev-humor preset)
 </p>
 
 ## Features
@@ -78,11 +78,12 @@ Three components work together:
 ## CLI
 
 ```bash
-npx claude-code-discord-status setup          # Interactive setup wizard
-npx claude-code-discord-status status         # Check daemon status and active sessions
-npx claude-code-discord-status start -d       # Start daemon in background
-npx claude-code-discord-status stop           # Stop the daemon
-npx claude-code-discord-status uninstall      # Remove everything
+npx claude-code-discord-status setup            # Interactive setup wizard
+npx claude-code-discord-status status           # Check daemon status and active sessions
+npx claude-code-discord-status start -d         # Start daemon in background
+npx claude-code-discord-status stop             # Stop the daemon
+npx claude-code-discord-status preset [name]    # Change message style
+npx claude-code-discord-status uninstall        # Remove everything
 ```
 
 ## Configuration
@@ -93,10 +94,34 @@ Config file: `~/.claude-discord-status/config.json`
 | --- | --- | --- | --- |
 | `discordClientId` | `CLAUDE_DISCORD_CLIENT_ID` | `1472915568930848829` | Discord Application Client ID |
 | `daemonPort` | `CLAUDE_DISCORD_PORT` | `19452` | Local HTTP server port |
+| `preset` | `CLAUDE_DISCORD_PRESET` | `minimal` | Message style preset |
 
 The default client ID works out of the box — it's a public app identifier, not a secret.
 
 > See [docs/setup.md](./docs/setup.md) for all config options, timeouts, and how to use a custom Discord application.
+
+## Message Presets
+
+Choose how your Discord status sounds. Set during setup, or change anytime:
+
+```bash
+npx claude-code-discord-status preset            # Interactive selection
+npx claude-code-discord-status preset dev-humor   # Set directly
+```
+
+| Preset | Style | Example |
+| --- | --- | --- |
+| `minimal` | Terse, just the facts (default) | _"Coding"_ |
+| `professional` | Clean, understated | _"Actively developing"_ |
+| `dev-humor` | Classic programmer jokes | _"// TODO: sleep"_ |
+| `gen-z` | Quirky, meme-flavored | _"No thoughts just code"_ |
+| `chaotic` | Pushing to main, living dangerously | _"Deploying on a Friday"_ |
+
+Override via environment variable:
+
+```bash
+export CLAUDE_DISCORD_PRESET=professional
+```
 
 ## Multi-Session Fun
 

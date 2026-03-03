@@ -1,5 +1,6 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { loadConfig } from '../shared/config.js';
+import { getPreset } from '../presets/index.js';
 import { CONFIG_DIR, PID_FILE, UPDATE_CHECK_INTERVAL } from '../shared/constants.js';
 import { SessionRegistry } from './sessions.js';
 import { resolvePresence } from './resolver.js';
@@ -10,6 +11,7 @@ import { checkForUpdate } from '../shared/update-checker.js';
 import type { UpdateCheckResult } from '../shared/types.js';
 
 const config = loadConfig();
+const preset = getPreset(config.preset);
 const startTime = Date.now();
 
 // Ensure config directory exists
@@ -43,7 +45,7 @@ const server = createDaemonServer(registry, () => ({
 // Wire registry changes to presence resolver
 registry.onChange(() => {
   const sessions = registry.getAllSessions();
-  const activity = resolvePresence(sessions);
+  const activity = resolvePresence(sessions, preset);
 
   if (activity) {
     discord.setActivity(activity);

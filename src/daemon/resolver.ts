@@ -1,14 +1,9 @@
 import type { Session, DiscordActivity, ActivityCounts } from '../shared/types.js';
+import type { MessagePreset } from '../presets/types.js';
 import {
   LARGE_IMAGE_KEY,
   LARGE_IMAGE_TEXT,
   MESSAGE_ROTATION_INTERVAL,
-  MULTI_SESSION_MESSAGES,
-  MULTI_SESSION_MESSAGES_OVERFLOW,
-  MULTI_SESSION_TOOLTIPS,
-  SINGLE_SESSION_DETAILS,
-  SINGLE_SESSION_DETAILS_FALLBACK,
-  SINGLE_SESSION_STATE_MESSAGES,
 } from '../shared/constants.js';
 
 const MAX_FIELD_LENGTH = 128;
@@ -16,22 +11,28 @@ const MIN_FIELD_LENGTH = 2;
 
 export function resolvePresence(
   sessions: Session[],
+  preset: MessagePreset,
   now: number = Date.now(),
 ): DiscordActivity | null {
   if (sessions.length === 0) return null;
 
   if (sessions.length === 1) {
-    return buildSingleSessionActivity(sessions[0], now);
+    return buildSingleSessionActivity(sessions[0], preset, now);
   }
 
-  return buildMultiSessionActivity(sessions, now);
+  return buildMultiSessionActivity(sessions, preset, now);
 }
 
-function buildSingleSessionActivity(session: Session, now: number): DiscordActivity {
-  const pool = SINGLE_SESSION_DETAILS[session.smallImageKey] ?? SINGLE_SESSION_DETAILS_FALLBACK;
+function buildSingleSessionActivity(
+  session: Session,
+  preset: MessagePreset,
+  now: number,
+): DiscordActivity {
+  const pool =
+    preset.singleSessionDetails[session.smallImageKey] ?? preset.singleSessionDetailsFallback;
   const details = stablePick(pool, session.startedAt, now);
 
-  const state = stablePick(SINGLE_SESSION_STATE_MESSAGES, session.startedAt + 1, now);
+  const state = stablePick(preset.singleSessionStateMessages, session.startedAt + 1, now);
 
   return {
     details,
@@ -44,13 +45,17 @@ function buildSingleSessionActivity(session: Session, now: number): DiscordActiv
   };
 }
 
-function buildMultiSessionActivity(sessions: Session[], now: number): DiscordActivity {
+function buildMultiSessionActivity(
+  sessions: Session[],
+  preset: MessagePreset,
+  now: number,
+): DiscordActivity {
   const count = sessions.length;
   const earliest = sessions.reduce((a, b) => (a.startedAt < b.startedAt ? a : b));
   const seed = earliest.startedAt;
 
   // Pick details from tier-appropriate message pool
-  const pool = MULTI_SESSION_MESSAGES[count] ?? MULTI_SESSION_MESSAGES_OVERFLOW;
+  const pool = preset.multiSessionMessages[count] ?? preset.multiSessionMessagesOverflow;
   let details = stablePick(pool, seed, now);
   if (count > 4) {
     details = details.replace(/\{n\}/g, String(count));
@@ -59,7 +64,7 @@ function buildMultiSessionActivity(sessions: Session[], now: number): DiscordAct
   const state = formatStatsLine(sessions, now);
   const dominantMode = detectDominantMode(sessions);
   const smallImageKey = dominantMode === 'mixed' ? 'multi-session' : dominantMode;
-  const smallImageText = stablePick(MULTI_SESSION_TOOLTIPS, seed + 1, now);
+  const smallImageText = stablePick(preset.multiSessionTooltips, seed + 1, now);
 
   return {
     details,
