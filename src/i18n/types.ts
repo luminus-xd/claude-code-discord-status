@@ -8,6 +8,19 @@ export interface StatsFormatters {
   justStarted: string;
 }
 
+export interface HookMessages {
+  thinking: string;
+  edit: string;
+  bash: string;
+  read: string;
+  grep: string;
+  web: string;
+  task: string;
+  fallback: string;
+  finished: string;
+  waiting: string;
+}
+
 export interface Messages {
   smallImageText: Record<string, string>;
   singleSessionDetails: Record<string, string[]>;
@@ -25,4 +38,5 @@ export interface Messages {
     resumingDetails: string;
     startingSmallImageText: string;
   };
+  hook: HookMessages;
 }

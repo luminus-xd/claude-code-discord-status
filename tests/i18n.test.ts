@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { ja } from '../src/i18n/ja.js';
 import { en } from '../src/i18n/en.js';
+import type { Messages } from '../src/i18n/types.js';
+
+function assertHookMessages(locale: Messages) {
+  for (const key of Object.keys(locale.hook) as (keyof Messages['hook'])[]) {
+    expect(locale.hook[key]).toBeDefined();
+    expect(locale.hook[key].length).toBeGreaterThan(0);
+    expect(locale.hook[key].length).toBeLessThanOrEqual(128);
+  }
+}
 
 describe('i18n - ja', () => {
   it('全アクティビティモードの smallImageText が定義されている', () => {
@@ -91,8 +100,13 @@ describe('i18n - ja', () => {
     });
   });
 
+  it('hook メッセージが全フィールド定義されている', () => {
+    assertHookMessages(ja);
+  });
+
   it('英語ロケールと同じキー構造を持つ', () => {
     expect(Object.keys(ja).sort()).toEqual(Object.keys(en).sort());
+    expect(Object.keys(ja.hook).sort()).toEqual(Object.keys(en.hook).sort());
   });
 });
 
@@ -126,6 +140,10 @@ describe('i18n - en', () => {
 
   it('ツールチップが25件ある', () => {
     expect(en.tooltips.length).toBe(25);
+  });
+
+  it('hook メッセージが全フィールド定義されている', () => {
+    assertHookMessages(en);
   });
 
   it('統計テキストの英語単数/複数形が正しい', () => {

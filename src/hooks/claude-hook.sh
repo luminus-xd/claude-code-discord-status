@@ -16,28 +16,36 @@ if [ -z "$LOCALE" ] && [ -f "$CONFIG_FILE" ] && command -v jq &>/dev/null; then
 fi
 LOCALE="${LOCALE:-en}"
 
-# --- Locale message table ---
-if [ "$LOCALE" = "ja" ]; then
-  MSG_SESSION_START="セッション開始中…"
-  MSG_SESSION_RESUME="セッション復帰中…"
-  MSG_ICON_STARTING="起動中"
-  MSG_THINKING="考え中…"
-  MSG_EDIT="ファイルを編集中"
-  MSG_ICON_CODING="コード記述中"
-  MSG_BASH="コマンド実行中"
-  MSG_ICON_TERMINAL="コマンド実行中"
-  MSG_READ="ファイルを読み込み中"
-  MSG_ICON_READING="ファイル読み込み中"
-  MSG_GREP="コードベースを検索中"
-  MSG_WEB="Webを検索中"
-  MSG_ICON_SEARCHING="検索中"
-  MSG_TASK="サブタスク実行中"
-  MSG_ICON_THINKING="考え中…"
-  MSG_FALLBACK="作業中…"
-  MSG_FINISHED="完了"
-  MSG_WAITING="入力待ち"
-  MSG_ICON_IDLE="待機中"
+# --- Load messages from locale JSON (try directly, no existence checks) ---
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+JQ_EXTRACT='
+  "MSG_SESSION_START=\(.sessionStart | @sh)",
+  "MSG_SESSION_RESUME=\(.sessionResume | @sh)",
+  "MSG_ICON_STARTING=\(.iconStarting | @sh)",
+  "MSG_THINKING=\(.thinking | @sh)",
+  "MSG_EDIT=\(.edit | @sh)",
+  "MSG_ICON_CODING=\(.iconCoding | @sh)",
+  "MSG_BASH=\(.bash | @sh)",
+  "MSG_ICON_TERMINAL=\(.iconTerminal | @sh)",
+  "MSG_READ=\(.read | @sh)",
+  "MSG_ICON_READING=\(.iconReading | @sh)",
+  "MSG_GREP=\(.grep | @sh)",
+  "MSG_WEB=\(.web | @sh)",
+  "MSG_ICON_SEARCHING=\(.iconSearching | @sh)",
+  "MSG_TASK=\(.task | @sh)",
+  "MSG_ICON_THINKING=\(.iconThinking | @sh)",
+  "MSG_FALLBACK=\(.fallback | @sh)",
+  "MSG_FINISHED=\(.finished | @sh)",
+  "MSG_WAITING=\(.waiting | @sh)",
+  "MSG_ICON_IDLE=\(.iconIdle | @sh)"
+'
+
+if MSGS=$(jq -r "$JQ_EXTRACT" "${SCRIPT_DIR}/locales/${LOCALE}.json" 2>/dev/null); then
+  eval "$MSGS"
+elif MSGS=$(jq -r "$JQ_EXTRACT" "${SCRIPT_DIR}/locales/en.json" 2>/dev/null); then
+  eval "$MSGS"
 else
+  # Hardcoded English fallback (jq unavailable or locale files missing)
   MSG_SESSION_START="Starting session..."
   MSG_SESSION_RESUME="Resuming session..."
   MSG_ICON_STARTING="Starting up"

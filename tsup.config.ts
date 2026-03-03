@@ -24,6 +24,8 @@ export default defineConfig([
     entry: {
       'daemon/index': 'src/daemon/index.ts',
       'mcp/index': 'src/mcp/index.ts',
+      'i18n/en': 'src/i18n/en.ts',
+      'i18n/ja': 'src/i18n/ja.ts',
     },
     format: ['esm'],
     target: 'node18',

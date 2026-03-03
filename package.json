@@ -7,7 +7,7 @@
     "claude-discord-status": "./dist/cli.js"
   },
   "scripts": {
-    "build": "tsup",
+    "build": "tsup && node scripts/generate-hook-locales.mjs",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",

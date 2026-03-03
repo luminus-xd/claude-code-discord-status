@@ -237,4 +237,17 @@ export const en: Messages = {
     resumingDetails: 'Resuming session...',
     startingSmallImageText: 'Starting up',
   },
+
+  hook: {
+    thinking: 'Thinking...',
+    edit: 'Editing a file',
+    bash: 'Running a command',
+    read: 'Reading a file',
+    grep: 'Searching codebase',
+    web: 'Searching the web',
+    task: 'Running a subtask',
+    fallback: 'Working...',
+    finished: 'Finished',
+    waiting: 'Waiting for input',
+  },
 };

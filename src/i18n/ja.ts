@@ -237,4 +237,17 @@ export const ja: Messages = {
     resumingDetails: 'セッション復帰中…',
     startingSmallImageText: '起動中',
   },
+
+  hook: {
+    thinking: '考え中…',
+    edit: 'ファイルを編集中',
+    bash: 'コマンド実行中',
+    read: 'ファイルを読み込み中',
+    grep: 'コードベースを検索中',
+    web: 'Webを検索中',
+    task: 'サブタスク実行中',
+    fallback: '作業中…',
+    finished: '完了',
+    waiting: '入力待ち',
+  },
 };

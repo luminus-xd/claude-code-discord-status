@@ -4,3 +4,4 @@ node_modules/
 .claude-discord-status/
 *.tsbuildinfo
 coverage/
+src/hooks/locales/
