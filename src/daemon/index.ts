@@ -73,10 +73,13 @@ async function shutdown(): Promise<void> {
   await discord.destroy();
 
   try {
-    const { unlinkSync } = await import('node:fs');
-    unlinkSync(PID_FILE);
+    const { readFileSync, unlinkSync } = await import('node:fs');
+    const filePid = parseInt(readFileSync(PID_FILE, 'utf-8').trim(), 10);
+    if (filePid === process.pid) {
+      unlinkSync(PID_FILE);
+    }
   } catch {
-    // PID file may not exist
+    // PID file may not exist or already removed
   }
 
   process.exit(0);

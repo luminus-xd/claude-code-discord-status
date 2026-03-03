@@ -35,6 +35,21 @@ const __dirname = dirname(__filename);
 const args = process.argv.slice(2);
 const command = args[0];
 
+async function waitForProcessExit(pid: number, timeoutMs = 3000): Promise<boolean> {
+  const interval = 100;
+  let elapsed = 0;
+  while (elapsed < timeoutMs) {
+    try {
+      process.kill(pid, 0);
+    } catch {
+      return true;
+    }
+    await new Promise((r) => setTimeout(r, interval));
+    elapsed += interval;
+  }
+  return false;
+}
+
 function getDaemonPid(): number | null {
   try {
     if (existsSync(PID_FILE)) {
@@ -120,12 +135,8 @@ async function update(): Promise<void> {
   if (pid) {
     try {
       process.kill(pid, 'SIGTERM');
+      await waitForProcessExit(pid);
       p.log.success(`Daemon stopped (PID ${pid})`);
-    } catch {
-      // ignore
-    }
-    try {
-      unlinkSync(PID_FILE);
     } catch {
       // ignore
     }
@@ -686,11 +697,7 @@ async function changePreset(presetArg?: string): Promise<void> {
   if (pid) {
     try {
       process.kill(pid, 'SIGTERM');
-    } catch {
-      // ignore
-    }
-    try {
-      unlinkSync(PID_FILE);
+      await waitForProcessExit(pid);
     } catch {
       // ignore
     }
