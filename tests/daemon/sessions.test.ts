@@ -1,5 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
+import { initLocale } from '../../src/i18n/index.js';
 import { SessionRegistry } from '../../src/daemon/sessions.js';
+
+beforeAll(() => {
+  initLocale('en');
+});
 
 describe('SessionRegistry', () => {
   let registry: SessionRegistry;

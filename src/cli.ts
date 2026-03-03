@@ -369,11 +369,29 @@ async function setup(): Promise<void> {
     p.log.info(`Using custom Client ID: ${resolvedClientId}`);
   }
 
+  // --- Locale ---
+  const locale = await p.select({
+    message: 'Language for Discord status messages',
+    options: [
+      { value: 'en', label: 'English', hint: 'default' },
+      { value: 'ja', label: '日本語', hint: 'Japanese' },
+    ],
+    initialValue: 'en',
+  });
+
+  if (p.isCancel(locale)) {
+    p.cancel('Setup cancelled.');
+    process.exit(0);
+  }
+
   mkdirSync(CONFIG_DIR, { recursive: true });
-  const config = {
+  const config: { discordClientId: string; daemonPort: number; locale?: string } = {
     discordClientId: resolvedClientId,
     daemonPort: DEFAULT_PORT,
   };
+  if (locale !== 'en') {
+    config.locale = locale;
+  }
   writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
   p.log.success(`Config written to ${CONFIG_FILE}`);
 

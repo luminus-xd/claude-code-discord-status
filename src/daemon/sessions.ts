@@ -7,6 +7,7 @@ import type {
 } from '../shared/types.js';
 import { emptyActivityCounts } from '../shared/types.js';
 import { MCP_PRIORITY_WINDOW } from '../shared/constants.js';
+import { getMessages } from '../i18n/index.js';
 
 const COUNTER_MAP: Record<string, keyof ActivityCounts> = {
   coding: 'edits',
@@ -30,14 +31,15 @@ export class SessionRegistry {
 
   startSession(sessionId: string, request: SessionStartRequest): Session {
     const now = Date.now();
+    const msgs = getMessages();
     const session: Session = {
       sessionId,
       pid: request.pid,
       projectPath: request.projectPath,
       projectName: basename(request.projectPath),
-      details: 'Starting session...',
+      details: msgs.session.startingDetails,
       smallImageKey: 'starting',
-      smallImageText: 'Starting up',
+      smallImageText: msgs.session.startingSmallImageText,
       startedAt: now,
       lastActivityAt: now,
       lastMcpUpdateAt: 0,

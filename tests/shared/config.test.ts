@@ -15,6 +15,7 @@ describe('loadConfig', () => {
     delete process.env.CLAUDE_DISCORD_CLIENT_ID;
     delete process.env.CLAUDE_DISCORD_PORT;
     delete process.env.CLAUDE_DISCORD_UPDATE_CHECK;
+    delete process.env.CLAUDE_DISCORD_LOCALE;
   });
 
   afterEach(() => {
@@ -36,6 +37,7 @@ describe('loadConfig', () => {
     expect(config.idleTimeout).toBe(600_000);
     expect(config.removeTimeout).toBe(1_800_000);
     expect(config.updateCheck).toBe(true);
+    expect(config.locale).toBe('en');
   });
 
   it('reads from config file', async () => {
@@ -102,5 +104,31 @@ describe('loadConfig', () => {
     const config = await loadConfig();
     expect(config.discordClientId).toBe('1472915568930848829');
     expect(config.daemonPort).toBe(19452);
+  });
+
+  it('reads locale from config file', async () => {
+    vi.mocked(existsSync).mockReturnValue(true);
+    vi.mocked(readFileSync).mockReturnValue(
+      JSON.stringify({
+        locale: 'en',
+      }),
+    );
+
+    const config = await loadConfig();
+    expect(config.locale).toBe('en');
+  });
+
+  it('CLAUDE_DISCORD_LOCALE env var overrides config file locale', async () => {
+    vi.mocked(existsSync).mockReturnValue(true);
+    vi.mocked(readFileSync).mockReturnValue(
+      JSON.stringify({
+        locale: 'en',
+      }),
+    );
+
+    process.env.CLAUDE_DISCORD_LOCALE = 'ja';
+
+    const config = await loadConfig();
+    expect(config.locale).toBe('ja');
   });
 });

@@ -1,6 +1,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { loadConfig } from '../shared/config.js';
 import { CONFIG_DIR, PID_FILE, UPDATE_CHECK_INTERVAL } from '../shared/constants.js';
+import { initLocale } from '../i18n/index.js';
 import { SessionRegistry } from './sessions.js';
 import { resolvePresence } from './resolver.js';
 import { DiscordClient } from './discord.js';
@@ -10,6 +11,7 @@ import { checkForUpdate } from '../shared/update-checker.js';
 import type { UpdateCheckResult } from '../shared/types.js';
 
 const config = loadConfig();
+initLocale(config.locale);
 const startTime = Date.now();
 
 // Ensure config directory exists

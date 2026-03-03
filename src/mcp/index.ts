@@ -5,14 +5,17 @@ import { fileURLToPath } from 'node:url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { DEFAULT_PORT, CONFIG_DIR, LOG_FILE } from '../shared/constants.js';
+import { CONFIG_DIR, LOG_FILE } from '../shared/constants.js';
+import { loadConfig } from '../shared/config.js';
+import { initLocale, getMessages } from '../i18n/index.js';
+
+const mcpConfig = loadConfig();
+initLocale(mcpConfig.locale);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const DAEMON_PORT = process.env.CLAUDE_DISCORD_PORT
-  ? parseInt(process.env.CLAUDE_DISCORD_PORT, 10)
-  : DEFAULT_PORT;
+const DAEMON_PORT = mcpConfig.daemonPort;
 const DAEMON_URL = `http://127.0.0.1:${DAEMON_PORT}`;
 
 let cachedSessionId: string | null = null;
@@ -116,7 +119,7 @@ server.tool(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            details: 'Working...',
+            details: getMessages().mcp.defaultStatus,
             priority: 'hook',
           }),
         });

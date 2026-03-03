@@ -58,6 +58,7 @@ export interface AppConfig {
   idleTimeout: number;
   removeTimeout: number;
   updateCheck: boolean;
+  locale: string;
 }
 
 export interface HealthResponse {

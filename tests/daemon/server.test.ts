@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import type { Server } from 'node:http';
+import { initLocale } from '../../src/i18n/index.js';
 import { SessionRegistry } from '../../src/daemon/sessions.js';
 import { createDaemonServer } from '../../src/daemon/server.js';
 
@@ -8,6 +9,7 @@ let baseUrl: string;
 let registry: SessionRegistry;
 
 beforeAll(async () => {
+  initLocale('en');
   registry = new SessionRegistry();
   server = createDaemonServer(registry, () => ({
     connected: true,

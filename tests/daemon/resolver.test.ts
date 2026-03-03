@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import {
   resolvePresence,
   getMostRecentSession,
@@ -8,15 +8,19 @@ import {
 } from '../../src/daemon/resolver.js';
 import type { Session, ActivityCounts } from '../../src/shared/types.js';
 import { emptyActivityCounts } from '../../src/shared/types.js';
-import {
-  MCP_PRIORITY_WINDOW,
-  MESSAGE_ROTATION_INTERVAL,
-  MULTI_SESSION_MESSAGES,
-  MULTI_SESSION_TOOLTIPS,
-  SINGLE_SESSION_DETAILS,
-  SINGLE_SESSION_DETAILS_FALLBACK,
-  SINGLE_SESSION_STATE_MESSAGES,
-} from '../../src/shared/constants.js';
+import { MCP_PRIORITY_WINDOW, MESSAGE_ROTATION_INTERVAL } from '../../src/shared/constants.js';
+import { initLocale } from '../../src/i18n/index.js';
+import { en } from '../../src/i18n/en.js';
+
+beforeAll(() => {
+  initLocale('en');
+});
+
+const SINGLE_SESSION_DETAILS = en.singleSessionDetails;
+const SINGLE_SESSION_DETAILS_FALLBACK = en.singleSessionDetailsFallback;
+const SINGLE_SESSION_STATE_MESSAGES = en.singleSessionState;
+const MULTI_SESSION_MESSAGES = en.multiSession;
+const MULTI_SESSION_TOOLTIPS = en.tooltips;
 
 function makeSession(overrides: Partial<Session> = {}): Session {
   return {
