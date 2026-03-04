@@ -4,6 +4,7 @@ import { professionalPreset } from './professional.js';
 import { devHumorPreset } from './dev-humor.js';
 import { minimalPreset } from './minimal.js';
 import { chaoticPreset } from './chaotic.js';
+import { emaPreset } from './ema.js';
 
 export type { PresetName, MessagePreset } from './types.js';
 
@@ -13,6 +14,7 @@ export const PRESET_NAMES: PresetName[] = [
   'dev-humor',
   'gen-z',
   'chaotic',
+  'ema',
 ];
 
 export const PRESETS: Record<PresetName, MessagePreset> = {
@@ -21,6 +23,7 @@ export const PRESETS: Record<PresetName, MessagePreset> = {
   'dev-humor': devHumorPreset,
   minimal: minimalPreset,
   chaotic: chaoticPreset,
+  ema: emaPreset,
 };
 
 export const DEFAULT_PRESET: PresetName = 'minimal';

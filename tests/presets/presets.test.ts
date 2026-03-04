@@ -9,7 +9,14 @@ import {
 
 describe('presets', () => {
   it('exports all expected preset names', () => {
-    expect(PRESET_NAMES).toEqual(['minimal', 'professional', 'dev-humor', 'gen-z', 'chaotic']);
+    expect(PRESET_NAMES).toEqual([
+      'minimal',
+      'professional',
+      'dev-humor',
+      'gen-z',
+      'chaotic',
+      'ema',
+    ]);
   });
 
   it('has a valid default preset', () => {

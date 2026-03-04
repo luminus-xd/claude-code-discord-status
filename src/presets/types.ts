@@ -1,4 +1,4 @@
-export type PresetName = 'gen-z' | 'professional' | 'dev-humor' | 'minimal' | 'chaotic';
+export type PresetName = 'gen-z' | 'professional' | 'dev-humor' | 'minimal' | 'chaotic' | 'ema';
 
 export interface MessagePreset {
   /** Human-readable name for CLI display */
