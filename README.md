@@ -117,6 +117,7 @@ npx claude-code-discord-status preset dev-humor   # Set directly
 | `dev-humor` | Classic programmer jokes | _"// TODO: sleep"_ |
 | `gen-z` | Quirky, meme-flavored | _"No thoughts just code"_ |
 | `chaotic` | Pushing to main, living dangerously | _"Deploying on a Friday"_ |
+| `ema` | Gentle and cheerful Japanese-speaking girl | _"がんばってコーディング中だよ"_ |
 
 Override via environment variable:
 
