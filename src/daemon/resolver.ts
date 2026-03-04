@@ -1,42 +1,38 @@
 import type { Session, DiscordActivity, ActivityCounts } from '../shared/types.js';
+import type { MessagePreset } from '../presets/types.js';
 import {
   LARGE_IMAGE_KEY,
   LARGE_IMAGE_TEXT,
-  MCP_PRIORITY_WINDOW,
   MESSAGE_ROTATION_INTERVAL,
 } from '../shared/constants.js';
-import { getMessages } from '../i18n/index.js';
 
 const MAX_FIELD_LENGTH = 128;
 const MIN_FIELD_LENGTH = 2;
 
 export function resolvePresence(
   sessions: Session[],
+  preset: MessagePreset,
   now: number = Date.now(),
 ): DiscordActivity | null {
   if (sessions.length === 0) return null;
 
   if (sessions.length === 1) {
-    return buildSingleSessionActivity(sessions[0], now);
+    return buildSingleSessionActivity(sessions[0], preset, now);
   }
 
-  return buildMultiSessionActivity(sessions, now);
+  return buildMultiSessionActivity(sessions, preset, now);
 }
 
-function buildSingleSessionActivity(session: Session, now: number): DiscordActivity {
-  const isMcpActive = now - session.lastMcpUpdateAt < MCP_PRIORITY_WINDOW;
-  const msgs = getMessages();
+function buildSingleSessionActivity(
+  session: Session,
+  preset: MessagePreset,
+  now: number,
+): DiscordActivity {
+  const pool =
+    preset.singleSessionDetails[session.smallImageKey] ?? preset.singleSessionDetailsFallback;
+  const details = stablePick(pool, session.startedAt, now);
 
-  let details: string;
-  if (isMcpActive && session.details) {
-    details = sanitizeField(session.details) ?? 'Using Claude Code';
-  } else {
-    const pool =
-      msgs.singleSessionDetails[session.smallImageKey] ?? msgs.singleSessionDetailsFallback;
-    details = stablePick(pool, session.startedAt, now);
-  }
-
-  const state = stablePick(msgs.singleSessionState, session.startedAt + 1, now);
+  const state = stablePick(preset.singleSessionStateMessages, session.startedAt + 1, now);
 
   return {
     details,
@@ -49,23 +45,26 @@ function buildSingleSessionActivity(session: Session, now: number): DiscordActiv
   };
 }
 
-function buildMultiSessionActivity(sessions: Session[], now: number): DiscordActivity {
+function buildMultiSessionActivity(
+  sessions: Session[],
+  preset: MessagePreset,
+  now: number,
+): DiscordActivity {
   const count = sessions.length;
   const earliest = sessions.reduce((a, b) => (a.startedAt < b.startedAt ? a : b));
   const seed = earliest.startedAt;
-  const msgs = getMessages();
 
   // Pick details from tier-appropriate message pool
-  const pool = msgs.multiSession[count] ?? msgs.multiSessionOverflow;
+  const pool = preset.multiSessionMessages[count] ?? preset.multiSessionMessagesOverflow;
   let details = stablePick(pool, seed, now);
   if (count > 4) {
     details = details.replace(/\{n\}/g, String(count));
   }
 
   const state = formatStatsLine(sessions, now);
-  const dominantMode = detectDominantMode(sessions);
-  const smallImageKey = dominantMode === 'mixed' ? 'multi-session' : dominantMode;
-  const smallImageText = stablePick(msgs.tooltips, seed + 1, now);
+  const mostRecent = getMostRecentSession(sessions)!;
+  const smallImageKey = mostRecent.smallImageKey;
+  const smallImageText = stablePick(preset.multiSessionTooltips, seed + 1, now);
 
   return {
     details,
@@ -86,7 +85,6 @@ export function stablePick(pool: string[], seed: number, now: number): string {
 
 export function formatStatsLine(sessions: Session[], now: number): string {
   const totals: ActivityCounts = { edits: 0, commands: 0, searches: 0, reads: 0, thinks: 0 };
-  const msgs = getMessages();
 
   for (const session of sessions) {
     totals.edits += session.activityCounts.edits;
@@ -97,22 +95,28 @@ export function formatStatsLine(sessions: Session[], now: number): string {
   }
 
   const parts: string[] = [];
-  if (totals.edits > 0) parts.push(msgs.stats.edits(totals.edits));
-  if (totals.commands > 0) parts.push(msgs.stats.cmds(totals.commands));
-  if (totals.searches > 0) parts.push(msgs.stats.searches(totals.searches));
-  if (totals.reads > 0) parts.push(msgs.stats.reads(totals.reads));
-  if (totals.thinks > 0) parts.push(msgs.stats.thinks(totals.thinks));
+  if (totals.edits > 0) parts.push(`${totals.edits} ${totals.edits === 1 ? 'edit' : 'edits'}`);
+  if (totals.commands > 0)
+    parts.push(`${totals.commands} ${totals.commands === 1 ? 'cmd' : 'cmds'}`);
+  if (totals.searches > 0)
+    parts.push(`${totals.searches} ${totals.searches === 1 ? 'search' : 'searches'}`);
+  if (totals.reads > 0) parts.push(`${totals.reads} ${totals.reads === 1 ? 'read' : 'reads'}`);
+  if (totals.thinks > 0) parts.push(`${totals.thinks} ${totals.thinks === 1 ? 'think' : 'thinks'}`);
 
   // Append elapsed time from earliest session
   const earliest = sessions.reduce((a, b) => (a.startedAt < b.startedAt ? a : b));
   const elapsedMs = now - earliest.startedAt;
   const elapsedMin = Math.floor(elapsedMs / 60_000);
-  if (elapsedMin > 0) {
-    parts.push(msgs.stats.elapsed(elapsedMin));
+  if (elapsedMin >= 60) {
+    const h = Math.floor(elapsedMin / 60);
+    const m = elapsedMin % 60;
+    parts.push(m > 0 ? `${h}h ${m}m deep` : `${h}h deep`);
+  } else if (elapsedMin > 0) {
+    parts.push(`${elapsedMin}m deep`);
   }
 
   const joined = parts.join(' \u00b7 ');
-  if (joined.length === 0) return msgs.stats.justStarted;
+  if (joined.length === 0) return 'Just getting started';
   if (joined.length > MAX_FIELD_LENGTH) return joined.slice(0, MAX_FIELD_LENGTH - 1) + '\u2026';
   return joined;
 }

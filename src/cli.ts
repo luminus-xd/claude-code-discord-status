@@ -13,6 +13,8 @@ import {
   PACKAGE_NAME,
 } from './shared/constants.js';
 import { loadConfig } from './shared/config.js';
+import { PRESETS, PRESET_NAMES, DEFAULT_PRESET, isValidPreset } from './presets/index.js';
+import type { PresetName } from './presets/types.js';
 import { formatDuration, statusBadge, connectionBadge, dim } from './cli-utils.js';
 import { VERSION } from './shared/version.js';
 import {
@@ -32,6 +34,21 @@ const __dirname = dirname(__filename);
 
 const args = process.argv.slice(2);
 const command = args[0];
+
+async function waitForProcessExit(pid: number, timeoutMs = 3000): Promise<boolean> {
+  const interval = 100;
+  let elapsed = 0;
+  while (elapsed < timeoutMs) {
+    try {
+      process.kill(pid, 0);
+    } catch {
+      return true;
+    }
+    await new Promise((r) => setTimeout(r, interval));
+    elapsed += interval;
+  }
+  return false;
+}
 
 function getDaemonPid(): number | null {
   try {
@@ -118,15 +135,19 @@ async function update(): Promise<void> {
   if (pid) {
     try {
       process.kill(pid, 'SIGTERM');
+      await waitForProcessExit(pid);
       p.log.success(`Daemon stopped (PID ${pid})`);
     } catch {
       // ignore
     }
-    try {
-      unlinkSync(PID_FILE);
-    } catch {
-      // ignore
-    }
+  }
+
+  // Clean up legacy MCP server registration (removed in v1.x)
+  try {
+    execSync('claude mcp remove discord-status', { stdio: 'pipe' });
+    p.log.success('Removed legacy MCP server registration');
+  } catch {
+    // MCP was never registered or claude CLI not available — ignore
   }
 
   // Run npm install
@@ -248,6 +269,9 @@ async function showStatus(): Promise<void> {
     return;
   }
 
+  const config = loadConfig();
+  const presetLabel = isValidPreset(config.preset) ? PRESETS[config.preset].label : config.preset;
+
   const lines: string[] = [];
   lines.push(`PID        ${pid ?? 'unknown'}`);
 
@@ -255,15 +279,16 @@ async function showStatus(): Promise<void> {
     lines.push(`Version    v${health.version}`);
     lines.push(`Discord    ${connectionBadge(health.connected)}`);
     lines.push(`Sessions   ${health.sessions} active`);
+    lines.push(`Preset     ${presetLabel}`);
     lines.push(`Uptime     ${formatDuration(health.uptime * 1000)}`);
   } else {
+    lines.push(`Preset     ${presetLabel}`);
     lines.push(`Health     Could not reach daemon`);
   }
 
   p.note(lines.join('\n'), 'Daemon Status');
 
   // Show active sessions
-  const config = loadConfig();
   try {
     const res = await fetch(`http://127.0.0.1:${config.daemonPort}/sessions`);
     if (res.ok) {
@@ -369,63 +394,44 @@ async function setup(): Promise<void> {
     p.log.info(`Using custom Client ID: ${resolvedClientId}`);
   }
 
-  // --- Locale ---
-  const locale = await p.select({
-    message: 'Language for Discord status messages',
-    options: [
-      { value: 'en', label: 'English', hint: 'default' },
-      { value: 'ja', label: '日本語', hint: 'Japanese' },
-    ],
-    initialValue: 'en',
+  // Read existing preset if reconfiguring
+  let existingPreset: PresetName = DEFAULT_PRESET;
+  if (existingConfig) {
+    try {
+      const current = JSON.parse(readFileSync(CONFIG_FILE, 'utf-8'));
+      if (current.preset && isValidPreset(current.preset)) {
+        existingPreset = current.preset;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const presetChoice = await p.select({
+    message: 'Choose a message style',
+    options: PRESET_NAMES.map((name) => ({
+      value: name,
+      label: PRESETS[name].label,
+      hint: PRESETS[name].description,
+    })),
+    initialValue: existingPreset,
   });
 
-  if (p.isCancel(locale)) {
+  if (p.isCancel(presetChoice)) {
     p.cancel('Setup cancelled.');
     process.exit(0);
   }
 
   mkdirSync(CONFIG_DIR, { recursive: true });
-  const config: { discordClientId: string; daemonPort: number; locale?: string } = {
+  const config = {
     discordClientId: resolvedClientId,
     daemonPort: DEFAULT_PORT,
+    preset: presetChoice,
   };
-  if (locale !== 'en') {
-    config.locale = locale;
-  }
   writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2), 'utf-8');
   p.log.success(`Config written to ${CONFIG_FILE}`);
 
   // --- Installation ---
-
-  // Check if claude CLI exists
-  let hasClaude = false;
-  try {
-    execSync('which claude', { stdio: 'pipe' });
-    hasClaude = true;
-  } catch {
-    // claude CLI not found
-  }
-
-  const mcpPath = resolve(__dirname, 'mcp', 'index.js');
-
-  if (hasClaude) {
-    try {
-      execSync(`claude mcp add --transport stdio --scope user discord-status -- node ${mcpPath}`, {
-        stdio: 'pipe',
-      });
-      p.log.success('MCP server registered');
-    } catch {
-      p.log.warn('Could not register MCP server automatically.');
-      p.log.info(
-        `  Run: claude mcp add --transport stdio --scope user discord-status -- node ${mcpPath}`,
-      );
-    }
-  } else {
-    p.log.warn('claude CLI not found — skipping MCP registration.');
-    p.log.info(
-      `  Run: claude mcp add --transport stdio --scope user discord-status -- node ${mcpPath}`,
-    );
-  }
 
   // Merge hooks into ~/.claude/settings.json
   const hookScriptPath = resolve(__dirname, '..', 'src', 'hooks', 'claude-hook.sh');
@@ -566,7 +572,7 @@ async function uninstall(): Promise<void> {
   p.intro('claude-discord-status');
 
   const shouldContinue = await p.confirm({
-    message: 'This will remove all hooks, MCP registration, and config. Continue?',
+    message: 'This will remove all hooks and config. Continue?',
     initialValue: false,
   });
 
@@ -591,14 +597,6 @@ async function uninstall(): Promise<void> {
     }
   } else {
     p.log.info('Daemon was not running');
-  }
-
-  // Remove MCP server
-  try {
-    execSync('claude mcp remove discord-status', { stdio: 'pipe' });
-    p.log.success('MCP server removed');
-  } catch {
-    p.log.warn('Could not remove MCP server (may not have been registered)');
   }
 
   // Remove hooks from settings
@@ -644,17 +642,104 @@ async function uninstall(): Promise<void> {
   p.outro('Uninstall complete.');
 }
 
+async function changePreset(presetArg?: string): Promise<void> {
+  p.intro(`claude-discord-status v${VERSION}`);
+
+  let selectedPreset: PresetName;
+
+  if (presetArg && isValidPreset(presetArg)) {
+    selectedPreset = presetArg;
+  } else {
+    if (presetArg) {
+      p.log.warn(`Unknown preset "${presetArg}". Available: ${PRESET_NAMES.join(', ')}`);
+    }
+
+    // Read current preset from config
+    let currentPreset: PresetName = DEFAULT_PRESET;
+    try {
+      if (existsSync(CONFIG_FILE)) {
+        const current = JSON.parse(readFileSync(CONFIG_FILE, 'utf-8'));
+        if (current.preset && isValidPreset(current.preset)) {
+          currentPreset = current.preset;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    const choice = await p.select({
+      message: 'Choose a message style',
+      options: PRESET_NAMES.map((name) => ({
+        value: name,
+        label: PRESETS[name].label,
+        hint: PRESETS[name].description,
+      })),
+      initialValue: currentPreset,
+    });
+
+    if (p.isCancel(choice)) {
+      p.cancel('Cancelled.');
+      process.exit(0);
+    }
+
+    selectedPreset = choice;
+  }
+
+  // Update config file
+  let existingConfig: Record<string, unknown> = {};
+  try {
+    if (existsSync(CONFIG_FILE)) {
+      existingConfig = JSON.parse(readFileSync(CONFIG_FILE, 'utf-8'));
+    }
+  } catch {
+    // ignore
+  }
+
+  existingConfig.preset = selectedPreset;
+  mkdirSync(CONFIG_DIR, { recursive: true });
+  writeFileSync(CONFIG_FILE, JSON.stringify(existingConfig, null, 2), 'utf-8');
+  p.log.success(`Message style set to ${PRESETS[selectedPreset].label}`);
+
+  // Restart daemon if running
+  const pid = getDaemonPid();
+  if (pid) {
+    try {
+      process.kill(pid, 'SIGTERM');
+      await waitForProcessExit(pid);
+    } catch {
+      // ignore
+    }
+
+    const daemonPath = resolve(__dirname, 'daemon', 'index.js');
+    if (existsSync(daemonPath)) {
+      mkdirSync(CONFIG_DIR, { recursive: true });
+      const { openSync } = await import('node:fs');
+      const logFd = openSync(LOG_FILE, 'a');
+      const child = spawn('node', [daemonPath], {
+        detached: true,
+        stdio: ['ignore', logFd, logFd],
+        env: { ...process.env },
+      });
+      child.unref();
+      p.log.success(`Daemon restarted (PID ${child.pid})`);
+    }
+  }
+
+  p.outro();
+}
+
 function showHelp(): void {
   p.intro(`claude-discord-status v${VERSION}`);
 
   p.note(
     [
-      'setup        Interactive setup',
-      'start [-d]   Start the daemon (-d for background)',
-      'stop         Stop the daemon',
-      'status       Show daemon status and sessions',
-      'update       Update to the latest version',
-      'uninstall    Remove all hooks, MCP, and config',
+      'setup            Interactive setup',
+      'start [-d]       Start the daemon (-d for background)',
+      'stop             Stop the daemon',
+      'status           Show daemon status and sessions',
+      'preset [name]    Change message style',
+      'update           Update to the latest version',
+      'uninstall        Remove all hooks and config',
     ].join('\n'),
     'Commands',
   );
@@ -676,6 +761,9 @@ switch (command) {
     break;
   case 'setup':
     await setup();
+    break;
+  case 'preset':
+    await changePreset(args[1]);
     break;
   case 'uninstall':
     await uninstall();

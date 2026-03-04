@@ -1,7 +1,5 @@
 export type SessionStatus = 'active' | 'idle';
 
-export type UpdatePriority = 'hook' | 'mcp';
-
 export interface ActivityCounts {
   edits: number;
   commands: number;
@@ -24,7 +22,6 @@ export interface Session {
   smallImageText: string;
   startedAt: number;
   lastActivityAt: number;
-  lastMcpUpdateAt: number;
   status: SessionStatus;
   activityCounts: ActivityCounts;
 }
@@ -38,7 +35,6 @@ export interface SessionActivityRequest {
   details?: string | null;
   smallImageKey?: string;
   smallImageText?: string;
-  priority?: UpdatePriority;
 }
 
 export interface DiscordActivity {
@@ -58,7 +54,7 @@ export interface AppConfig {
   idleTimeout: number;
   removeTimeout: number;
   updateCheck: boolean;
-  locale: string;
+  preset: string;
 }
 
 export interface HealthResponse {

@@ -6,8 +6,6 @@ import type {
   ActivityCounts,
 } from '../shared/types.js';
 import { emptyActivityCounts } from '../shared/types.js';
-import { MCP_PRIORITY_WINDOW } from '../shared/constants.js';
-import { getMessages } from '../i18n/index.js';
 
 const COUNTER_MAP: Record<string, keyof ActivityCounts> = {
   coding: 'edits',
@@ -31,18 +29,16 @@ export class SessionRegistry {
 
   startSession(sessionId: string, request: SessionStartRequest): Session {
     const now = Date.now();
-    const msgs = getMessages();
     const session: Session = {
       sessionId,
       pid: request.pid,
       projectPath: request.projectPath,
       projectName: basename(request.projectPath),
-      details: msgs.session.startingDetails,
+      details: 'Starting session...',
       smallImageKey: 'starting',
-      smallImageText: msgs.session.startingSmallImageText,
+      smallImageText: 'Starting up',
       startedAt: now,
       lastActivityAt: now,
-      lastMcpUpdateAt: 0,
       status: 'active',
       activityCounts: emptyActivityCounts(),
     };
@@ -57,11 +53,6 @@ export class SessionRegistry {
 
     const now = Date.now();
 
-    // MCP priority window: suppress hook updates within 30s of an MCP update
-    if (request.priority === 'hook' && this.isInMcpWindow(session, now)) {
-      return session;
-    }
-
     if (request.details !== undefined) {
       session.details = request.details ?? session.details;
     }
@@ -70,9 +61,6 @@ export class SessionRegistry {
     }
     if (request.smallImageText !== undefined) {
       session.smallImageText = request.smallImageText;
-    }
-    if (request.priority === 'mcp') {
-      session.lastMcpUpdateAt = now;
     }
 
     const counterKey = COUNTER_MAP[session.smallImageKey];
@@ -105,13 +93,6 @@ export class SessionRegistry {
 
   getSessionCount(): number {
     return this.sessions.size;
-  }
-
-  isInMcpWindow(session: Session, now?: number): boolean {
-    const currentTime = now ?? Date.now();
-    return (
-      session.lastMcpUpdateAt > 0 && currentTime - session.lastMcpUpdateAt < MCP_PRIORITY_WINDOW
-    );
   }
 
   checkStaleSessions(idleTimeout: number, removeTimeout: number): void {

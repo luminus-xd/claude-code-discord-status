@@ -1,7 +1,7 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { loadConfig } from '../shared/config.js';
+import { getPreset } from '../presets/index.js';
 import { CONFIG_DIR, PID_FILE, UPDATE_CHECK_INTERVAL } from '../shared/constants.js';
-import { initLocale } from '../i18n/index.js';
 import { SessionRegistry } from './sessions.js';
 import { resolvePresence } from './resolver.js';
 import { DiscordClient } from './discord.js';
@@ -11,7 +11,7 @@ import { checkForUpdate } from '../shared/update-checker.js';
 import type { UpdateCheckResult } from '../shared/types.js';
 
 const config = loadConfig();
-initLocale(config.locale);
+const preset = getPreset(config.preset);
 const startTime = Date.now();
 
 // Ensure config directory exists
@@ -45,7 +45,7 @@ const server = createDaemonServer(registry, () => ({
 // Wire registry changes to presence resolver
 registry.onChange(() => {
   const sessions = registry.getAllSessions();
-  const activity = resolvePresence(sessions);
+  const activity = resolvePresence(sessions, preset);
 
   if (activity) {
     discord.setActivity(activity);
@@ -73,10 +73,13 @@ async function shutdown(): Promise<void> {
   await discord.destroy();
 
   try {
-    const { unlinkSync } = await import('node:fs');
-    unlinkSync(PID_FILE);
+    const { readFileSync, unlinkSync } = await import('node:fs');
+    const filePid = parseInt(readFileSync(PID_FILE, 'utf-8').trim(), 10);
+    if (filePid === process.pid) {
+      unlinkSync(PID_FILE);
+    }
   } catch {
-    // PID file may not exist
+    // PID file may not exist or already removed
   }
 
   process.exit(0);
